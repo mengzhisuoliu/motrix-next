@@ -285,6 +285,7 @@ export default {
   'color-scheme-sakura': 'Hoa anh đào',
   'color-scheme-switched': 'Đã chuyển sang bảng màu {name}',
   'open-settings': 'Đi đến Cài đặt',
+  'protocol-unregister-manual-required': 'Bị hệ thống giới hạn, vui lòng thay đổi thủ công.',
   'protocol-macos-unregister-hint':
     'macOS yêu cầu thay đổi chương trình mặc định cho {protocol}:// trong Cài đặt Hệ thống → Ứng dụng Mặc định',
   'default-programs': 'Chương trình mặc định',

@@ -287,6 +287,7 @@ export default {
   'color-scheme-sakura': 'Сакура',
   'color-scheme-switched': 'Кольорову схему змінено на {name}',
   'open-settings': 'Перейти до налаштувань',
+  'protocol-unregister-manual-required': 'Обмежено системою, змініть вручну.',
   'protocol-macos-unregister-hint':
     'macOS вимагає змінити програму за замовчуванням для {protocol}:// у Системних налаштуваннях → Стандартні програми',
   'default-programs': 'Програми за замовчуванням',

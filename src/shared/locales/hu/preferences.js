@@ -287,6 +287,7 @@ export default {
   'color-scheme-sakura': 'Szakura',
   'color-scheme-switched': 'Színséma átváltva: {name}',
   'open-settings': 'Beállítások megnyitása',
+  'protocol-unregister-manual-required': 'A rendszer korlátozza, módosítsa kézzel.',
   'protocol-macos-unregister-hint':
     'A macOS rendszeren a(z) {protocol}:// alapértelmezett programjának módosítása a Rendszerbeállítások → Alapértelmezett alkalmazások menüben szükséges',
   'default-programs': 'Alapértelmezett programok',

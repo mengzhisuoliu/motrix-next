@@ -279,6 +279,7 @@ export default {
   'color-scheme-sakura': '樱花粉',
   'color-scheme-switched': '已切换至「{name}」配色',
   'open-settings': '前往设置',
+  'protocol-unregister-manual-required': '系统不允许直接取消此关联，请手动更改。',
   'protocol-macos-unregister-hint': '{protocol}:// 需在 macOS「系统设置 → 默认应用」中手动更改',
   'default-programs': '默认程序',
   'protocol-motrixnext': '浏览器扩展 [ motrixnext:// ]',

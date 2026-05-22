@@ -284,6 +284,7 @@ export default {
   'color-scheme-sakura': 'أزهار الكرز',
   'color-scheme-switched': 'تم التبديل إلى نظام ألوان {name}',
   'open-settings': 'الانتقال إلى الإعدادات',
+  'protocol-unregister-manual-required': 'يقيد النظام ذلك، يرجى تغييره يدوياً.',
   'protocol-macos-unregister-hint':
     'يتطلب macOS تغيير البرنامج الافتراضي لـ {protocol}:// في إعدادات النظام ← التطبيقات الافتراضية',
   'default-programs': 'البرامج الافتراضية',

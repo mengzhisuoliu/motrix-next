@@ -288,6 +288,7 @@ export default {
   'color-scheme-sakura': 'Sakura',
   'color-scheme-switched': 'Renk şeması {name} olarak değiştirildi',
   'open-settings': 'Ayarlara git',
+  'protocol-unregister-manual-required': 'Sistem tarafından kısıtlandı, lütfen elle değiştirin.',
   'protocol-macos-unregister-hint':
     "macOS, {protocol}:// için varsayılan programı Sistem Ayarları → Varsayılan Uygulamalar'dan değiştirmenizi gerektirir",
   'default-programs': 'Varsayılan Programlar',

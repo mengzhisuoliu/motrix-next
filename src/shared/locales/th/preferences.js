@@ -283,6 +283,7 @@ export default {
   'color-scheme-sakura': 'ซากุระ',
   'color-scheme-switched': 'เปลี่ยนเป็นชุดสี {name} แล้ว',
   'open-settings': 'ไปที่การตั้งค่า',
+  'protocol-unregister-manual-required': 'ถูกจำกัดโดยระบบ โปรดเปลี่ยนด้วยตนเอง',
   'protocol-macos-unregister-hint':
     'macOS ต้องการเปลี่ยนโปรแกรมเริ่มต้นสำหรับ {protocol}:// ในการตั้งค่าระบบ → แอปเริ่มต้น',
   'default-programs': 'โปรแกรมเริ่มต้น',

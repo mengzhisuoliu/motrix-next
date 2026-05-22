@@ -56,7 +56,7 @@ const historyStore = useHistoryStore()
 const message = useAppMessage()
 const dialog = useDialog()
 
-const { isLinux, isMac } = usePlatform()
+const { isLinux } = usePlatform()
 
 import { ENGINE_RPC_PORT } from '@shared/constants'
 import { diffConfig, checkIsNeedRestart } from '@shared/utils/config'
@@ -90,6 +90,8 @@ const selectedClipboardTypes = computed<string[]>({
     }
   },
 })
+
+const MANUAL_PROTOCOL_CHANGE_REQUIRED = 'manual_change_required'
 
 const aria2ConfPath = ref('')
 const sessionPath = ref('')
@@ -285,12 +287,8 @@ const { form, isDirty, handleSave, handleReset, resetSnapshot } = usePreferenceF
               message.success(t('preferences.protocol-registered', { protocol }))
             }
           } else if (prev) {
-            if (isMac.value) {
-              message.info(t('preferences.protocol-macos-unregister-hint', { protocol }))
-            } else {
-              await invoke('remove_as_default_protocol_client', { protocol })
-              message.success(t('preferences.protocol-unregistered', { protocol }))
-            }
+            await invoke('remove_as_default_protocol_client', { protocol })
+            message.success(t('preferences.protocol-unregistered', { protocol }))
           }
         } catch (e) {
           const reason =
@@ -300,7 +298,11 @@ const { form, isDirty, handleSave, handleReset, resetSnapshot } = usePreferenceF
                 ? Object.values(e as Record<string, unknown>).join(': ')
                 : String(e)
           logger.warn('Advanced.protocol', `Failed to ${enabled ? 'register' : 'unregister'} ${protocol}: ${reason}`)
-          message.error(t('preferences.protocol-failed', { protocol, reason }))
+          if (!enabled && reason.includes(MANUAL_PROTOCOL_CHANGE_REQUIRED)) {
+            message.warning(t('preferences.protocol-unregister-manual-required'))
+          } else {
+            message.error(t('preferences.protocol-failed', { protocol, reason }))
+          }
           ;(f as Record<string, unknown>)[formKey] = prev
           resetSnapshot()
           const revertedProtocols = { ...preferenceStore.config.protocols, [protocol]: prev }

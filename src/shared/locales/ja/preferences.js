@@ -286,6 +286,7 @@ export default {
   'color-scheme-sakura': 'サクラ',
   'color-scheme-switched': 'カラースキームを {name} に変更しました',
   'open-settings': '設定を開く',
+  'protocol-unregister-manual-required': 'システムの制限により、手動で変更してください。',
   'protocol-macos-unregister-hint':
     '{protocol}:// のデフォルトプログラムは macOS のシステム設定 → デフォルトのアプリで変更してください',
   'default-programs': '既定のプログラム',

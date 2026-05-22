@@ -285,6 +285,7 @@ export default {
   'color-scheme-sakura': '사쿠라',
   'color-scheme-switched': '{name} 색상 테마로 전환됨',
   'open-settings': '설정으로 이동',
+  'protocol-unregister-manual-required': '시스템 제한으로 수동으로 변경하세요.',
   'protocol-macos-unregister-hint':
     'macOS에서는 시스템 설정 → 기본 앱에서 {protocol}://의 기본 프로그램을 변경해야 합니다',
   'default-programs': '기본 프로그램',

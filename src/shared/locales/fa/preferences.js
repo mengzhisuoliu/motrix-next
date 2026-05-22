@@ -286,6 +286,7 @@ export default {
   'color-scheme-sakura': 'ساکورا',
   'color-scheme-switched': 'طرح رنگ به {name} تغییر کرد',
   'open-settings': 'رفتن به تنظیمات',
+  'protocol-unregister-manual-required': 'سیستم این کار را محدود کرده است، لطفاً دستی تغییر دهید.',
   'protocol-macos-unregister-hint':
     'macOS نیاز به تغییر برنامه پیش‌فرض برای {protocol}:// در تنظیمات سیستم ← برنامه‌های پیش‌فرض دارد',
   'default-programs': 'برنامه‌های پیش‌فرض',

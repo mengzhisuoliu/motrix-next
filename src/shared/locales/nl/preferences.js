@@ -289,6 +289,7 @@ export default {
   'color-scheme-sakura': 'Sakura',
   'color-scheme-switched': 'Kleurenschema gewijzigd naar {name}',
   'open-settings': 'Ga naar instellingen',
+  'protocol-unregister-manual-required': 'Beperkt door het systeem, wijzig dit handmatig.',
   'protocol-macos-unregister-hint':
     'macOS vereist het wijzigen van het standaardprogramma voor {protocol}:// in Systeeminstellingen → Standaardapps',
   'default-programs': "Standaardprogramma's",

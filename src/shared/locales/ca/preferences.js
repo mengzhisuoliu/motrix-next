@@ -289,6 +289,7 @@ export default {
   'color-scheme-sakura': 'Sakura',
   'color-scheme-switched': "S'ha canviat a l'esquema de colors {name}",
   'open-settings': 'Anar a la configuració',
+  'protocol-unregister-manual-required': 'El sistema ho restringeix, canvieu-ho manualment.',
   'protocol-macos-unregister-hint':
     'macOS requereix canviar el programa per defecte per a {protocol}:// a Ajustos del sistema → Aplicacions per defecte',
   'default-programs': 'Programes predeterminats',

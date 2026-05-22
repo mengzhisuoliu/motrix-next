@@ -5,13 +5,13 @@
 ///
 /// - `is_default_protocol_client` — checks if this app is the current default
 /// - `set_default_protocol_client` — registers this app as the default handler
-/// - `remove_as_default_protocol_client` — unregisters (Windows/Linux only)
+/// - `remove_as_default_protocol_client` — unregisters where the OS supports it
 ///
 /// ## Platform strategy
 ///
 /// | Platform | Query                                    | Register                     | Unregister               |
 /// |----------|------------------------------------------|------------------------------|--------------------------|
-/// | macOS    | `NSWorkspace.urlForApplication(toOpen:)` | `LSSetDefaultHandler…`       | no-op (unsupported)      |
+/// | macOS    | `NSWorkspace.urlForApplication(toOpen:)` | `LSSetDefaultHandler…`       | unsupported              |
 /// | Windows  | `win_registry::is_protocol_registered`   | `win_registry::register_…`   | `win_registry::unregister_…` |
 /// | Linux    | `tauri-plugin-deep-link::is_registered`  | `deep-link::register`        | `deep-link::unregister`  |
 ///
@@ -41,6 +41,8 @@
 /// mainstream download managers.
 use crate::error::AppError;
 use tauri::AppHandle;
+
+const MANUAL_CHANGE_REQUIRED: &str = "manual_change_required";
 
 // ── macOS native implementation ─────────────────────────────────────
 
@@ -555,6 +557,104 @@ pub mod win_registry {
     }
 }
 
+// ── Linux desktop-file cleanup ──────────────────────────────────────
+
+#[cfg(target_os = "linux")]
+mod linux_desktop {
+    use crate::error::AppError;
+    use std::{
+        fs,
+        path::{Path, PathBuf},
+        process::Command,
+    };
+    use tauri::{AppHandle, Manager};
+
+    pub fn remove_scheme_from_handler(app: &AppHandle, protocol: &str) -> Result<(), AppError> {
+        let target = handler_file_path(app)?;
+        if !target.exists() {
+            return Ok(());
+        }
+
+        let content = fs::read_to_string(&target).map_err(|e| {
+            AppError::Protocol(format!(
+                "read handler desktop file {}: {e}",
+                target.display()
+            ))
+        })?;
+        let updated = remove_scheme_from_desktop_content(&content, protocol);
+        if updated != content {
+            fs::write(&target, updated).map_err(|e| {
+                AppError::Protocol(format!(
+                    "write handler desktop file {}: {e}",
+                    target.display()
+                ))
+            })?;
+            refresh_desktop_database(target.parent())?;
+        }
+        Ok(())
+    }
+
+    fn handler_file_path(app: &AppHandle) -> Result<PathBuf, AppError> {
+        let bin = tauri::utils::platform::current_exe()
+            .map_err(|e| AppError::Protocol(format!("current_exe: {e}")))?;
+        let file_name = format!(
+            "{}-handler.desktop",
+            bin.file_name()
+                .ok_or_else(|| AppError::Protocol("current_exe has no file name".into()))?
+                .to_string_lossy()
+        );
+        Ok(app
+            .path()
+            .data_dir()
+            .map_err(|e| AppError::Protocol(format!("data_dir: {e}")))?
+            .join("applications")
+            .join(file_name))
+    }
+
+    fn refresh_desktop_database(target: Option<&Path>) -> Result<(), AppError> {
+        let Some(target) = target else {
+            return Ok(());
+        };
+        Command::new("update-desktop-database")
+            .arg(target)
+            .status()
+            .map_err(|e| AppError::Protocol(format!("update-desktop-database: {e}")))?;
+        Ok(())
+    }
+
+    pub fn remove_scheme_from_desktop_content(content: &str, protocol: &str) -> String {
+        let target = format!("x-scheme-handler/{protocol}");
+        let mut changed = false;
+        let lines: Vec<String> = content
+            .lines()
+            .map(|line| {
+                let Some(mimes) = line.strip_prefix("MimeType=") else {
+                    return line.to_string();
+                };
+                let kept: Vec<&str> = mimes
+                    .split(';')
+                    .filter(|mime| !mime.is_empty() && *mime != target)
+                    .collect();
+                changed = true;
+                if kept.is_empty() {
+                    "MimeType=".to_string()
+                } else {
+                    format!("MimeType={};", kept.join(";"))
+                }
+            })
+            .collect();
+        let mut output = if changed {
+            lines.join("\n")
+        } else {
+            content.to_string()
+        };
+        if content.ends_with('\n') && !output.ends_with('\n') {
+            output.push('\n');
+        }
+        output
+    }
+}
+
 // ── Windows elevation module ────────────────────────────────────────
 //
 // Retained as defence-in-depth for edge cases where HKCU writes fail
@@ -754,7 +854,7 @@ pub async fn remove_as_default_protocol_client(
     #[cfg(target_os = "macos")]
     {
         let _ = (&app, &protocol);
-        Ok(())
+        Err(AppError::Protocol(MANUAL_CHANGE_REQUIRED.into()))
     }
     #[cfg(windows)]
     {
@@ -778,7 +878,10 @@ pub async fn remove_as_default_protocol_client(
         use tauri_plugin_deep_link::DeepLinkExt;
         app.deep_link()
             .unregister(&protocol)
-            .map_err(|e| AppError::Protocol(e.to_string()))
+            .map_err(|e| AppError::Protocol(e.to_string()))?;
+        #[cfg(target_os = "linux")]
+        linux_desktop::remove_scheme_from_handler(&app, &protocol)?;
+        Ok(())
     }
 }
 
@@ -916,10 +1019,37 @@ mod tests {
         assert_eq!(json, r#"{"Protocol":"reg failed"}"#);
     }
 
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn linux_desktop_cleanup_removes_only_disabled_scheme() {
+        let input = "[Desktop Entry]\nMimeType=x-scheme-handler/ed2k;x-scheme-handler/magnet;x-scheme-handler/motrixnext;\nExec=\"/usr/bin/motrix-next\" %u\n";
+
+        let output = super::linux_desktop::remove_scheme_from_desktop_content(input, "magnet");
+
+        assert!(output.contains("x-scheme-handler/ed2k"));
+        assert!(output.contains("x-scheme-handler/motrixnext"));
+        assert!(!output.contains("x-scheme-handler/magnet"));
+        assert!(output.ends_with('\n'));
+    }
+
     #[cfg(target_os = "macos")]
     #[test]
-    fn macos_remove_is_noop() {
-        let _ = "magnet";
+    fn macos_remove_returns_manual_change_error() {
+        let src = production_source();
+        let fn_start = src
+            .find("pub async fn remove_as_default_protocol_client")
+            .expect("remove_as_default_protocol_client must exist");
+        let rest = &src[fn_start..];
+        let fn_end = rest[10..]
+            .find("\npub async fn ")
+            .map(|p| p + 10)
+            .unwrap_or(rest.len());
+        let fn_body = &rest[..fn_end];
+
+        assert!(
+            fn_body.contains("MANUAL_CHANGE_REQUIRED"),
+            "macOS removal must return a manual-change error instead of succeeding silently"
+        );
     }
 
     // ── Windows structural tests ────────────────────────────────────

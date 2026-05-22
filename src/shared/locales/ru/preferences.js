@@ -287,6 +287,7 @@ export default {
   'color-scheme-sakura': 'Сакура',
   'color-scheme-switched': 'Цветовая схема изменена на {name}',
   'open-settings': 'Перейти в настройки',
+  'protocol-unregister-manual-required': 'Ограничено системой, измените вручную.',
   'protocol-macos-unregister-hint':
     'macOS требует изменить программу по умолчанию для {protocol}:// в Системных настройках → Приложения по умолчанию',
   'default-programs': 'Программы по умолчанию',
