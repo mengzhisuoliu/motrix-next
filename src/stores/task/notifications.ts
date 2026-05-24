@@ -15,8 +15,6 @@ import { checkTaskIsSeeder } from '@shared/utils'
 import { logger } from '@shared/logger'
 import type { Aria2Task } from '@shared/types'
 
-const BT_RESTORE_SCAN_GRACE = 2
-
 interface ScanCallbacks {
   onTaskError?: ((task: Aria2Task) => void) | null
   onTaskComplete?: ((task: Aria2Task) => void) | null
@@ -49,18 +47,16 @@ export function createTaskNotifier(): TaskNotifier {
     return scanCount > 0
   }
 
-  function inBtRestoreGrace(): boolean {
-    return scanCount < BT_RESTORE_SCAN_GRACE
-  }
-
   function btCompletionKey(task: Aria2Task): string {
     return task.infoHash || task.gid
   }
 
-  function isCompletedBt(task: Aria2Task): boolean {
-    if (!task.bittorrent) return false
-    if (task.seeder === 'true') return true
-    return task.totalLength !== '0' && task.completedLength === task.totalLength
+  function btRestoreKeys(task: Aria2Task): string[] {
+    return task.infoHash ? [task.gid, task.infoHash] : [task.gid]
+  }
+
+  function isRestoredBt(task: Aria2Task): boolean {
+    return btRestoreKeys(task).some((key) => restoredBtCompleteKeys.has(key))
   }
 
   function scanTasks(tasks: Aria2Task[], callbacks: ScanCallbacks): void {
@@ -98,15 +94,17 @@ export function createTaskNotifier(): TaskNotifier {
     // Detect BT tasks entering seeding state (download phase complete)
     if (onBtComplete) {
       for (const task of tasks) {
-        if (inBtRestoreGrace() && isCompletedBt(task) && (scanCount === 0 || task.seeder !== 'true')) {
-          restoredBtCompleteKeys.add(btCompletionKey(task))
+        if (!initialScanDone() && task.bittorrent) {
+          for (const key of btRestoreKeys(task)) {
+            restoredBtCompleteKeys.add(key)
+          }
         }
 
         if (checkTaskIsSeeder(task)) {
           const key = btCompletionKey(task)
           if (!notifiedBtCompleteGids.has(key)) {
             notifiedBtCompleteGids.add(key)
-            if (initialScanDone() && !restoredBtCompleteKeys.has(key)) {
+            if (initialScanDone() && !isRestoredBt(task)) {
               onBtComplete(task)
             }
           }

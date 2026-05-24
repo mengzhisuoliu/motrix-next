@@ -211,9 +211,43 @@ describe('createTaskNotifier', () => {
     expect(onBtComplete).not.toHaveBeenCalled()
   })
 
+  it('does not fire onBtComplete when a restored BT task starts as zero length', () => {
+    const onBtComplete = vi.fn()
+    const notifier = createTaskNotifier()
+
+    notifier.scanTasks(
+      [
+        makeMockTask('bt1', 'active', {
+          bittorrent: { info: { name: 'Ubuntu.iso' } },
+          completedLength: '0',
+          totalLength: '0',
+          seeder: 'false',
+        }),
+      ],
+      { onBtComplete },
+    )
+
+    notifier.scanTasks(
+      [
+        makeMockTask('bt1', 'active', {
+          bittorrent: { info: { name: 'Ubuntu.iso' } },
+          infoHash: 'hydrated-info-hash',
+          completedLength: '1000',
+          totalLength: '1000',
+          seeder: 'true',
+        }),
+      ],
+      { onBtComplete },
+    )
+
+    expect(onBtComplete).not.toHaveBeenCalled()
+  })
+
   it('fires onBtComplete when a non-restored BT download enters seeding', () => {
     const onBtComplete = vi.fn()
     const notifier = createTaskNotifier()
+
+    notifier.scanTasks([], { onBtComplete })
 
     notifier.scanTasks(
       [

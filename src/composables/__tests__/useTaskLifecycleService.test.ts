@@ -358,6 +358,48 @@ describe('createTaskLifecycleService', () => {
     service.stop()
   })
 
+  it('does not fire onBtComplete for restored BT tasks that start as zero length', async () => {
+    api.fetchTaskList.mockImplementation(({ type }: { type: string }) => {
+      if (type === 'active') {
+        return Promise.resolve([
+          makeMockTask('bt1', 'active', {
+            bittorrent: { info: { name: 'restored.torrent' } },
+            completedLength: '0',
+            totalLength: '0',
+            seeder: 'false',
+          }),
+        ])
+      }
+      return Promise.resolve([])
+    })
+
+    const service = createTaskLifecycleService(api, callbacks)
+    service.start(() => 500)
+
+    await vi.advanceTimersByTimeAsync(500)
+
+    api.fetchTaskList.mockImplementation(({ type }: { type: string }) => {
+      if (type === 'active') {
+        return Promise.resolve([
+          makeMockTask('bt1', 'active', {
+            bittorrent: { info: { name: 'restored.torrent' } },
+            infoHash: 'hydrated-info-hash',
+            completedLength: '1000',
+            totalLength: '1000',
+            seeder: 'true',
+          }),
+        ])
+      }
+      return Promise.resolve([])
+    })
+
+    await vi.advanceTimersByTimeAsync(500)
+
+    expect(callbacks.onBtComplete).not.toHaveBeenCalled()
+
+    service.stop()
+  })
+
   // ── Deduplication ─────────────────────────────────────────────
 
   it('never re-fires for an already-seen GID across multiple scans', async () => {

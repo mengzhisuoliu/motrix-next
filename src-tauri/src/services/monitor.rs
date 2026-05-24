@@ -30,9 +30,6 @@ const STOPPED_SLICE_LIMIT: i64 = 50;
 /// Default polling interval in milliseconds.
 const DEFAULT_INTERVAL_MS: u64 = 2000;
 
-/// aria2 may hydrate restored BT fields across more than one poll after startup.
-const BT_RESTORE_SCAN_GRACE: u8 = 2;
-
 /// Events emitted to the frontend.
 pub mod events {
     pub const TASK_ERROR: &str = "task-monitor:error";
@@ -324,10 +321,6 @@ impl TaskNotifier {
         self.scan_count > 0
     }
 
-    fn in_bt_restore_grace(&self) -> bool {
-        self.scan_count < BT_RESTORE_SCAN_GRACE
-    }
-
     /// Scan tasks and return events that should be emitted.
     ///
     /// Suppresses callbacks during the first scan to avoid ghost
@@ -366,11 +359,8 @@ impl TaskNotifier {
                 }
             }
 
-            if self.in_bt_restore_grace()
-                && is_completed_bt(task)
-                && (self.scan_count == 0 || task.seeder.as_deref() != Some("true"))
-            {
-                self.restored_bt_completes.insert(bt_completion_key(task));
+            if !self.initial_scan_done() && task.bittorrent.is_some() {
+                self.restored_bt_completes.extend(bt_restore_keys(task));
             }
 
             // BT seeding detection (active + seeder == "true" + has bittorrent)
@@ -381,7 +371,7 @@ impl TaskNotifier {
                 let key = bt_completion_key(task);
                 if !self.notified_bt_completes.contains(&key) {
                     self.notified_bt_completes.insert(key.clone());
-                    if self.initial_scan_done() && !self.restored_bt_completes.contains(&key) {
+                    if self.initial_scan_done() && !self.is_restored_bt(task) {
                         emit.push((events::BT_COMPLETE.to_string(), TaskEvent::from_aria2(task)));
                     }
                 }
@@ -398,6 +388,12 @@ impl TaskNotifier {
 
         emit
     }
+
+    fn is_restored_bt(&self, task: &Aria2Task) -> bool {
+        bt_restore_keys(task)
+            .iter()
+            .any(|key| self.restored_bt_completes.contains(key))
+    }
 }
 
 fn bt_completion_key(task: &Aria2Task) -> String {
@@ -408,16 +404,12 @@ fn bt_completion_key(task: &Aria2Task) -> String {
         .to_string()
 }
 
-fn is_completed_bt(task: &Aria2Task) -> bool {
-    if task.bittorrent.is_none() {
-        return false;
+fn bt_restore_keys(task: &Aria2Task) -> Vec<String> {
+    let mut keys = vec![task.gid.clone()];
+    if let Some(hash) = task.info_hash.as_deref().filter(|hash| !hash.is_empty()) {
+        keys.push(hash.to_string());
     }
-
-    if task.seeder.as_deref() == Some("true") {
-        return true;
-    }
-
-    task.total_length != "0" && task.completed_length == task.total_length
+    keys
 }
 
 /// Handle for controlling the background monitor task.
@@ -961,6 +953,29 @@ mod tests {
     }
 
     #[test]
+    fn restored_bt_that_starts_as_zero_length_does_not_emit_when_seeder_arrives() {
+        let mut notifier = TaskNotifier::new();
+        let mut restoring = make_bt_task("g1", "active", false);
+        restoring.total_length = "0".to_string();
+        restoring.completed_length = "0".to_string();
+        restoring.info_hash = None;
+
+        notifier.scan(&[restoring]);
+
+        let events = notifier.scan(&[make_bt_task_with_hash(
+            "g1",
+            "active",
+            true,
+            "hydrated-info-hash",
+        )]);
+
+        assert!(
+            events.is_empty(),
+            "restored BT tasks can start as 0/0 before aria2 hydrates seeder and infoHash"
+        );
+    }
+
+    #[test]
     fn restored_bt_complete_is_matched_by_info_hash_across_gid_changes() {
         let mut notifier = TaskNotifier::new();
         notifier.scan(&[make_bt_task_with_hash(
@@ -989,7 +1004,7 @@ mod tests {
         let mut downloading = make_bt_task("g1", "active", false);
         downloading.completed_length = "512".to_string();
 
-        notifier.scan(&[downloading.clone()]);
+        notifier.scan(&[]);
         notifier.scan(&[downloading]);
 
         let events = notifier.scan(&[make_bt_task("g1", "active", true)]);
